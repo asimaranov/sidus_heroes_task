@@ -1,0 +1,62 @@
+services:
+  db:
+    image: postgres
+    environment:
+      - POSTGRES_USER=postgres_admin
+      - POSTGRES_PASSWORD=TUM1idndU7mjoEhq7v
+      - PGDATA=/data/postgres
+    ports:
+      - '5435:5432'
+    volumes:
+      - ./postgres:/data/postgres
+    restart: unless-stopped
+
+  backend:
+    build: .
+    ports:
+      - 8090:8090
+    volumes:
+      - .:/sidus_task
+
+    environment:
+      PYTHONUNBUFFERED: 1
+      TZ: Europe/Moscow
+
+    logging:
+      options:
+        max-size: 50m
+    depends_on:
+      - db
+      - redis
+
+    command: sh -c "uvicorn api:app --host 0.0.0.0 --port 8090"
+    restart: unless-stopped
+
+  test_backend:
+    build: .
+    volumes:
+      - .:/sidus_task
+
+    environment:
+      PYTHONUNBUFFERED: 1
+      TZ: Europe/Moscow
+
+    logging:
+      options:
+        max-size: 50m
+
+    depends_on:
+      - db
+      - redis
+
+    command: sh -c "pytest"
+    restart: unless-stopped
+
+  redis:
+    image: redis
+    ports:
+      - '6379:6379'
+    command: redis-server --save 20 1 --loglevel warning --requirepass CB8wRre4kHotGBDvUsxlf
+    volumes:
+      - ./redis:/data
+    restart: unless-stopped
