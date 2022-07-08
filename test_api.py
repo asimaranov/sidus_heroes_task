@@ -24,7 +24,6 @@ TEST_UPDATED_USER = gen_user()
 def test_user_creation():
     with TestClient(app) as client:
         response = client.post("/create_user", json=TEST_USER)
-    print(response.json())
     assert response.status_code == 200
     resp_json = response.json()
     assert resp_json['id'] > 0
@@ -74,6 +73,44 @@ def test_user_update():
         })
         assert auth_response.status_code == 200
         token = auth_response.json()['access_token']
-        update_user_response = client.post("/update_user", json={'email': TEST_UPDATED_USER['email']}, headers={"Authorization": f"Bearer ${token}"})
+        update_user_response = client.post("/update_user",
+                                           json={'email': TEST_UPDATED_USER['email']},
+                                           headers={
+                                               f'Authorization': f'Bearer {token}',
+                                               'Content-Type': 'application/json'}
+                                           )
         assert update_user_response.status_code == 200
         assert update_user_response.json()['email'] == TEST_UPDATED_USER['email']
+
+
+def test_get_user():
+    with TestClient(app) as client:
+        auth_response = client.get("/get_user")
+        assert auth_response.status_code == 200
+
+
+def test_get_user_caching():
+    with TestClient(app) as client:
+        auth_response = client.get("/get_user")
+        assert auth_response.status_code == 200
+        assert auth_response.json()['cached'] is True
+
+
+def test_user_update_drops_cache():
+    with TestClient(app) as client:
+        auth_response = client.post("/token", json=TEST_USER, data={
+            'username': TEST_USER['username'],
+            'password': TEST_USER['password'],
+        })
+
+        token = auth_response.json()['access_token']
+        client.post("/update_user",
+                    json={'email': TEST_UPDATED_USER['email']},
+                    headers={
+                        f'Authorization': f'Bearer {token}',
+                        'Content-Type': 'application/json'}
+                    )
+
+        auth_response = client.get("/get_user")
+        assert auth_response.status_code == 200
+        assert auth_response.json()['cached'] is False

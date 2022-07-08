@@ -53,7 +53,7 @@ async def get_user():
 
     await app.state.redis.set('user_cache', json.dumps([dict(x) for x in user_info]))
 
-    return {'data': user_info, 'cached': True}
+    return {'data': user_info, 'cached': False}
 
 
 @app.post("/create_user")
